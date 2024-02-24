@@ -9,7 +9,7 @@ MS-DOSと同じように、8088/V20の８Mhz版に対応し、8Mhzで動作す�
 
 
 SBCの詳細と、CP/M-86の詳細については、以下を参照してください。<br>
-
+https://github.com/akih-san/EMU8088_57Q_CPM86
 
 <br>
 FWのソースのコンパイルは、マイクロチップ社の<br>
