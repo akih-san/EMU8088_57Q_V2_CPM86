@@ -5,7 +5,7 @@ PICのファームウェアと、CBIOSを更新しました。<br>
 MS-DOSと同じように、8088/V20の８Mhz版に対応し、8Mhzで動作するようになります。<br>
 
 # BIOS V2.0のCP/M-86起動画面<br>
-![EMU8088 1](photo/emu88v2_cpm.png.png)
+![EMU8088 1](photo/emu88v2_cpm.png)
 
 
 SBCの詳細と、CP/M-86の詳細については、以下を参照してください。<br>
