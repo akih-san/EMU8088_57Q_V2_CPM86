@@ -1,9 +1,9 @@
 # EMU8088_57Q BIOS V2.0 CP/M-86<br>
 <br>
 MS-DOSを動かしているファームウェアの方式で、CP/M-86が動作するように<br>
-PICのファームウェアと、CBIOSを更新しました。
+PICのファームウェアと、CBIOSを更新しました。<br>
 MS-DOSと同じように、8088/V20の８Mhz版に対応し、8Mhzで動作するようになります。<br>
-<br>
+
 # BIOS V2.0のCP/M-86起動画面<br>
 ![EMU8088 1](photo/emu88v2_cpm.png.png)
 
