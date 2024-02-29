@@ -3,7 +3,20 @@
 MS-DOSを動かしているファームウェアの方式で、CP/M-86が動作するように<br>
 PICのファームウェアと、CBIOSを更新しました。<br>
 MS-DOSと同じように、8088/V20の８Mhz版に対応し、8Mhzで動作するようになります。<br>
-
+<br>
+# 2-29-2024 新規ソフト追加
+<br>
+CP/M-86で動作する、以下の新規ソフトをDRIVEJに追加しました。<br>
+1. GM88.CMD    : GAME言語（インタープリタ）<br>
+2. TTBASIC.CMD : 豊四季タイニーBASIC（インタープリタ）<br>
+3. VTL88.CMD   : Very Tiny Language（インタープリタ）<br>
+<br>
+電脳伝説さん（@vintagechips）のSBCV20で動かしていたものをCP/M-86で<br>
+動作するようにコンバートしたものです。コンバートしただけで、新規機能<br>
+はありません。（プログラムロードとかあれば便利なのでしょうけど^^;<br>
+詳細は以下を参照してください。<br>
+https://github.com/akih-san/SBCV20_8088
+<br>
 # BIOS V2.0のCP/M-86起動画面<br>
 ![EMU8088 1](photo/emu88v2_cpm.png)
 
