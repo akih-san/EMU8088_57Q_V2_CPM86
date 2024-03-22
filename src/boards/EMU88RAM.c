@@ -21,6 +21,16 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/*
+    PIC18F57Q43 ROM RAM and UART emulation firmware
+    This single source file contains all code
+    Original source code for PIC18F47Q43 ROM RAM and UART emulation firmware
+    Designed by @hanyazou https://twitter.com/hanyazou
+
+    Target: EMU8088 - The computer with only 8088/V20 and PIC18F57Q43
+    Written by Akihito Honda
+*/
+
 #define BOARD_DEPENDENT_SOURCE
 
 #include "../../src/emu88.h"
@@ -67,12 +77,6 @@
 #define I88_INTA	A4
 #define I88_INTR	B4
 
-#define SRAM_OE		I88_RD
-#define SRAM_WE		I88_WR
-
-// RA6 is used as UART TXD
-// RA7 is used as UART RXD
-
 #define SPI_SS		E2
 #define SPI_SD_POCI	C2
 
@@ -81,7 +85,6 @@
 #define SPI_SD_SS       SPI_SS
 
 #define CMD_REQ CLC3OUT
-#define BUS_HOLD_ACK R(I88_HOLDA)
 
 #include "emu88_common.c"
 
@@ -110,7 +113,6 @@ static void emu88_57q_sys_init()
 	
 	// IO/#M
 	WPU(I88_IOM) = 1;     // I88_IOM Week pull up
-//	LAT(I88_IOM) = 1;     // init: I/O operation
 	LAT(I88_IOM) = 0;     // init: I/O operation
 	TRIS(I88_IOM) = 0;    // Set as onput
 
@@ -119,16 +121,16 @@ static void emu88_57q_sys_init()
     TRIS(I88_ALE) = 1;    // Set as input
 
 	// /WR output pin
-	WPU(SRAM_WE) = 1;		// /WR Week pull up
-    LAT(SRAM_WE) = 1;		// disactive
-    TRIS(SRAM_WE) = 0;		// Set as output
-    PPS(SRAM_WE) = 0x00;	//reset:output PPS is LATCH
+	WPU(I88_WR) = 1;		// /WR Week pull up
+    LAT(I88_WR) = 1;		// disactive
+    TRIS(I88_WR) = 0;		// Set as output
+    PPS(I88_WR) = 0x00;	//reset:output PPS is LATCH
 
 	// /RD output pin
-	WPU(SRAM_OE) = 1;		// /WR Week pull up
-    LAT(SRAM_OE) = 1;		// disactive
-    TRIS(SRAM_OE) = 0;		// Set as output
-    PPS(SRAM_OE) = 0x00;	//reset:output PPS is LATCH
+	WPU(I88_RD) = 1;		// /WR Week pull up
+    LAT(I88_RD) = 1;		// disactive
+    TRIS(I88_RD) = 0;		// Set as output
+    PPS(I88_RD) = 0x00;	//reset:output PPS is LATCH
 
 	// SPI_SS
 	WPU(SPI_SS) = 1;     // SPI_SS Week pull up
@@ -138,6 +140,7 @@ static void emu88_57q_sys_init()
 	LAT(I88_CLK) = 1;	// 8088_CLK = 1
     TRIS(I88_CLK) = 0;	// set as output pin
 	
+
 // Setup CLC
 //
 	//========== CLC pin assign ===========
@@ -166,9 +169,10 @@ static void emu88_57q_sys_init()
 	reset_ioreq();
 
 	// SPI data and clock pins slew at maximum rate
-   SLRCON(SPI_SD_PICO) = 0;
-   SLRCON(SPI_SD_CLK) = 0;
-   SLRCON(SPI_SD_POCI) = 0;
+
+	SLRCON(SPI_SD_PICO) = 0;
+	SLRCON(SPI_SD_CLK) = 0;
+	SLRCON(SPI_SD_POCI) = 0;
 
 /*********** CLOCK TIMING ************************
  I88_CLK TIMING REQUIREMENTS(MUST)
@@ -196,16 +200,28 @@ static void emu88_57q_sys_init()
 
 // P64 = 1/64MHz = 15.625ns
 // P5  = 1/5MHz  = 200ns = P64 * 12.8
+// P8  = 1/8MHz  = 125nz = P64 * 8
 //
+// --- 4.92MHz ---
 // Set PWM Left Aligned mode
 // PR = 12
 // P1 = 5 : P64*5 = 78.125ns
 // P2 = 8 : P64*8 = 125ns
 // MODE = 0
-//     high period time: 125ns
-//     low period time: 78.125ns
-//     125ns + 78.125 = 203.125ns f = 4923076.9230769230769230769230769 Hz
+//     high period time: 78.125ns
+//     low period time: 125ns
+//     78.125 + 125ns = 203.125ns f = 4923076.9230769230769230769230769 Hz
 //     duty = 38.4%
+// --- 8MHz ---
+// Set PWM Left Aligned mode
+// PR = 7
+// P1 = 3 : P64*3 = 46.875ns
+// P2 = 5 : P64*5 = 78.125ns
+// MODE = 0
+//     high period time: 46.875ns
+//     low period time: 78.125ns
+//     46.875ns + 78.125 = 125ns f = 8 Hz
+//     duty = 37.5%
 ******************************************/
 
 	PWM3CLK = 0x02;		// Fsoc
@@ -236,12 +252,15 @@ static void emu88_57q_sys_init()
             printf("No SD Card?\n\r");
             while(1);
         }
-//debug111
-        if (SDCard_init(SPI_CLOCK_100KHZ, SPI_CLOCK_2MHZ, /* timeout */ 100) == SDCARD_SUCCESS)
+//        if (SDCard_init(SPI_CLOCK_100KHZ, SPI_CLOCK_2MHZ, /* timeout */ 100) == SDCARD_SUCCESS)
+        if (SDCard_init(SPI_CLOCK_100KHZ, SPI_CLOCK_4MHZ, /* timeout */ 100) == SDCARD_SUCCESS)
 //        if (SDCard_init(SPI_CLOCK_100KHZ, SPI_CLOCK_8MHZ, /* timeout */ 100) == SDCARD_SUCCESS)
             break;
         __delay_ms(200);
     }
+
+	GIE = 1;             // Global interrupt enable
+
 }
 
 static void emu88_57q_start_i88(void)
@@ -262,24 +281,18 @@ static void emu88_57q_start_i88(void)
     IVTLOCK = 0xAA;
     IVTLOCKbits.IVTLOCKED = 0x01;
 
-
-//	printf("Start 8088/V20\r\n");
-
 	TRIS(I88_HOLDA) = 1;    // HOLDA is set as input
 	LAT(I88_HOLD) = 0;		// Release HOLD
 	// I88 start
     LAT(I88_RESET) = 0;		// Release reset
+
 }
 
 void reset_ioreq(void)
 {
 	// Release wait (D-FF reset)
-	CLCSELECT = 2;		// CLC3 select
 	G3POL = 1;
 	G3POL = 0;
-
-//	while(CLC3OUT) {}
-
 }
 
 void set_hold_pin(void)
@@ -313,15 +326,10 @@ static void bus_hold_req(void) {
 	TRIS(I88_A18) = 0;			// Set as output
 	TRIS(I88_A19) = 0;			// Set as output
 
-	LAT(I88_RD) = 1;
-	LAT(I88_WR) = 1;
-
 	TRIS(I88_RD) = 0;           // output
 	TRIS(I88_WR) = 0;           // output
 	// SRAM U4, U5 are HiZ
 
-//	LAT(I88_IOM) = 1;     // IOM# =1 set IO accsess 
-	LAT(I88_IOM) = 0;     // IOM# =1 set IO accsess 
 	TRIS(I88_IOM) = 0;    // Set as output
 
 }
@@ -330,18 +338,15 @@ static void bus_release_req(void) {
 	// Set address bus as input
 	TRIS(I88_ADDR_L) = 0xff;    // A7-A0
 	TRIS(I88_ADDR_H) = 0xff;    // A8-A15
-	TRIS(I88_DATA) = 0xff;      // D7-D0 pin
 	TRIS(I88_A16) = 1;    // Set as input
 	TRIS(I88_A17) = 1;    // Set as input
 	TRIS(I88_A18) = 1;    // Set as input
 	TRIS(I88_A19) = 1;    // Set as input
 
-	LAT(I88_IOM) = 1;     // IOM# =1 set IO accsess 
-	TRIS(I88_IOM) = 1;          // input
-
 	// Set /RD and /WR as input
 	TRIS(I88_RD) = 1;           // input
 	TRIS(I88_WR) = 1;           // input
+	TRIS(I88_IOM) = 1;          // input
 }
 
 //--------------------------------
@@ -369,6 +374,7 @@ void board_init()
     board_sys_init_hook = emu88_57q_sys_init;
     board_start_i88_hook = emu88_57q_start_i88;
 }
+
 
 #include "../../drivers/pic18f57q43_spi.c"
 #include "../../drivers/SDCard.c"

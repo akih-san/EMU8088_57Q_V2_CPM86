@@ -71,6 +71,8 @@ static void emu88_common_sys_init()
 
     U3ON = 1;           // Serial port enable
 
+	U3RXIE = 1;          // Receiver interrupt enable
+
 	// Init address LATCH to 0
 	// Address bus A7-A0 pin
     WPU(I88_ADDR_L) = 0xff;     // Week pull up
@@ -121,10 +123,9 @@ static void emu88_common_start_i88(void)
 	// Data bus D7-D0 input pin
     TRIS(I88_DATA) = 0xff;      // Set as input
 
-	LAT(I88_IOM) = 1;	// init: I/O operation
-	TRIS(I88_IOM) = 1;			// Set as input
     TRIS(I88_RD) = 1;           // Set as input
     TRIS(I88_WR) = 1;           // Set as input
+	TRIS(I88_IOM) = 1;			// Set as input
 }
 
 void write_sram(uint32_t addr, uint8_t *buf, unsigned int len)
@@ -135,8 +136,6 @@ void write_sram(uint32_t addr, uint8_t *buf, unsigned int len)
     ab.w = addr;
 
 	// set SRAM read address
-//	LAT(I88_IOM) = 0;		// active RAM CE
-	LAT(SRAM_OE) = 1;		// deactivate /OE(/RD)
 	TRIS(I88_DATA) = 0x00;	// Set as output
 
 	// set SRAM read address
@@ -147,10 +146,9 @@ void write_sram(uint32_t addr, uint8_t *buf, unsigned int len)
 	LAT(I88_A18) = (ab.hl & 0x04) ? 1 : 0;
 	LAT(I88_A19) = (ab.hl & 0x08) ? 1 : 0;
     for(i = 0; i < len; i++) {
-        LAT(SRAM_WE) = 0;					// activate /WE
+        LAT(I88_WR) = 0;					// activate /WE
         LAT(I88_DATA) = ((uint8_t*)buf)[i];
-        LAT(SRAM_WE) = 0;					// activate /WE
-        LAT(SRAM_WE) = 1;					// deactivate /WE
+        LAT(I88_WR) = 1;					// deactivate /WE
 
     	LAT(I88_ADDR_L) = ++ab.ll;
         if (ab.ll == 0) {
@@ -164,7 +162,8 @@ void write_sram(uint32_t addr, uint8_t *buf, unsigned int len)
         	}
         }
     }
-//	LAT(I88_IOM) = 1;		// deactive RAM CE
+
+	TRIS(I88_DATA) = 0xFF;			// Set as input
 }
 
 void read_sram(uint32_t addr, uint8_t *buf, unsigned int len)
@@ -172,11 +171,9 @@ void read_sram(uint32_t addr, uint8_t *buf, unsigned int len)
     union address_bus_u ab;
     unsigned int i;
 
-//	LAT(I88_IOM) = 0;				// active RAM CE
-	LAT(SRAM_WE) = 1;				// deactivate /WE
-	TRIS(I88_DATA) = 0xFF;			// Set as input
-
 	ab.w = addr;
+
+	LAT(I88_RD) = 0;      // activate /OE
 
 	// set SRAM read address
 	LAT(I88_ADDR_H) = ab.lh;
@@ -187,10 +184,7 @@ void read_sram(uint32_t addr, uint8_t *buf, unsigned int len)
 	LAT(I88_A19) = (ab.hl & 0x08) ? 1 : 0;
 
 	for(i = 0; i < len; i++) {
-        LAT(SRAM_OE) = 0;      // activate /OE
         ((uint8_t*)buf)[i] = PORT(I88_DATA);
-        LAT(SRAM_OE) = 0;      // activate /OE
-        LAT(SRAM_OE) = 1;      // deactivate /OE
 
 		LAT(I88_ADDR_L) = ++ab.ll;
         if (ab.ll == 0) {
@@ -204,9 +198,10 @@ void read_sram(uint32_t addr, uint8_t *buf, unsigned int len)
         	}
         }
     }
-//	LAT(I88_IOM) = 1;		// deactive RAM CE
-}
 
+	LAT(I88_RD) = 1;      // deactivate /OE
+
+}
 
 static __bit emu88_common_rd_pin(void) { return R(I88_RD); }
 static __bit emu88_common_wr_pin(void) { return R(I88_WR); }
