@@ -80,9 +80,6 @@ void main(void)
     io_init();
     mem_init();
 
-    U3RXIE = 1;          // Receiver interrupt enable
-    GIE = 1;             // Global interrupt enable
-
     //
     // Transfer ROM image to the SRAM
 	// ROM image must fit 8088 startup address. reset vector = FFFF0h
